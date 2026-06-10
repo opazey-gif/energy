@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    .tij-gradient { background: linear-gradient(135deg, #0f172a 0%, #334155 100%); }
+    .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 700; }
+    .tab-inactive { color: #64748b; border-bottom: 3px solid transparent; }
+    .tab-inactive:hover { color: #3b82f6; border-bottom: 3px solid #bfdbfe; }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    /* Smart Print Layout */
+    @media print {
+      body { background-color: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .print-hidden, nav, #user-badge { display: none !important; }
+      header { border-radius: 0 !important; box-shadow: none !important; padding: 1rem 0 !important; margin-bottom: 1rem !important; background: transparent !important; color: #0f172a !important; border-bottom: 2px solid #e2e8f0; }
+      header h1 { color: #0f172a !important; }
+      header p { color: #64748b !important; }
+      header .bg-blue-500\/20 { background: #eff6ff !important; border-color: #bfdbfe !important; }
+      header i { color: #2563eb !important; }
+      .page-break-avoid { page-break-inside: avoid; }
+      .shadow-sm, .shadow-md, .shadow-lg { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+      main { padding: 0 !important; }
+      canvas { max-width: 100% !important; }
+      #app { max-width: 100% !important; margin: 0 !important; }
+      body::after { content: "TIJ Energy Intelligence - Generated automatically by OCTO_IT System"; position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 10px; color: #94a3b8; padding-bottom: 10px; }
+    }
+  </style>
+</head>
+<body class="p-0 m-0 text-slate-800">
+
+<div id="app" class="max-w-7xl mx-auto min-h-screen flex flex-col relative">
+  <!-- Header -->
+  <header class="tij-gradient text-white p-6 shadow-lg rounded-b-3xl mb-6">
+    <div class="flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="bg-blue-500/20 p-2 rounded-xl border border-blue-400/30">
+          <i data-lucide="zap" class="text-blue-400 w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">TIJ Energy Intelligence</h1>
+          <p class="text-slate-300 text-xs font-medium mt-1">Smart Facility, Solar, TOU & ESG Analytics</p>
+        </div>
+      </div>
+      <div id="user-badge" class="bg-white/10 px-4 py-2 rounded-full text-xs font-medium border border-white/10 backdrop-blur-sm flex items-center space-x-2">
+        <i data-lucide="user" class="w-3 h-3"></i>
+        <span>Loading...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Filter Bar -->
+  <div id="global-filter" class="print-hidden mx-4 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row justify-between items-center gap-4">
+    <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 w-full lg:w-auto">
+      <div class="flex items-center space-x-3 w-full md:w-auto">
+        <div class="p-2 bg-slate-100 rounded-lg"><i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i></div>
+        <select id="filter-year" onchange="updateDashboardUI()" class="bg-slate-50 border border-slate-300 text-slate-800 font-bold rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer w-full md:w-[200px]">
+          <option value="ALL">All Years (ภาพรวม)</option>
+        </select>
+      </div>
+      <div class="flex items-center space-x-2 w-full md:w-auto bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+        <i data-lucide="building-2" class="w-4 h-4 text-slate-500"></i>
+        <div class="flex flex-col">
+          <label class="text-[9px] font-bold text-slate-500 uppercase leading-none">พื้นที่อาคาร (ตร.ม.)</label>
+          <input id="filter-area" type="number" value="10000" onchange="updateDashboardUI()" class="bg-transparent text-sm font-bold text-slate-800 outline-none w-24 leading-tight">
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4 w-full lg:w-auto justify-between lg:justify-end">
+      <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-300 w-full lg:w-auto">
+        <button id="toggle-thb" onclick="setMetricMode('THB')" class="flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-blue-600 transition-all">THB (บาท)</button>
+        <button id="toggle-kwh" onclick="setMetricMode('KWH')" class="flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">kWh (หน่วย)</button>
+      </div>
+      <button onclick="window.print()" class="flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md w-full lg:w-auto">
+        <i data-lucide="printer" class="w-4 h-4"></i><span>Export PDF</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Multi-Tab Navigation -->
+  <nav class="flex space-x-2 px-6 border-b border-slate-200 mb-6 bg-transparent mx-4 relative z-10 print-hidden overflow-x-auto">
+    <button onclick="switchTab('form')" id="tab-form" class="px-4 py-3 text-sm font-medium tab-inactive transition-all flex items-center space-x-2 whitespace-nowrap">
+      <i data-lucide="file-plus" class="w-4 h-4"></i><span>Data Entry</span>
+    </button>
+    <button onclick="switchTab('overview')" id="tab-overview" class="px-4 py-3 text-sm font-medium tab-active transition-all flex items-center space-x-2 whitespace-nowrap">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>Overview (ภาพรวม)</span>
+    </button>
+    <button onclick="switchTab('grid')" id="tab-grid" class="px-4 py-3 text-sm font-medium tab-inactive transition-all flex items-center space-x-2 whitespace-nowrap">
+      <i data-lucide="plug" class="w-4 h-4"></i><span>Grid Analytics</span>
+    </button>
+    <button onclick="switchTab('solar')" id="tab-solar" class="px-4 py-3 text-sm font-medium tab-inactive transition-all flex items-center space-x-2 whitespace-nowrap">
+      <i data-lucide="sun" class="w-4 h-4"></i><span>Solar Analytics</span>
+    </button>
+    <button onclick="switchTab('tou')" id="tab-tou" class="px-4 py-3 text-sm font-medium tab-inactive transition-all flex items-center space-x-2 whitespace-nowrap">
+      <i data-lucide="clock" class="w-4 h-4"></i><span>TOU Analytics (รายวัน)</span>
+    </button>
+    <button onclick="switchTab('bas')" id="tab-bas" class="px-4 py-3 text-sm font-medium tab-inactive transition-all flex items-center space-x-2 whitespace-nowrap">
+      <i data-lucide="server" class="w-4 h-4"></i><span>BAS 50-Meters (รายชั้น)</span>
+    </button>
+  </nav>
+
+  <main class="flex-1 px-4 pb-12">
+    
+    <!-- ==================== VIEW: DATA ENTRY (FORM) ==================== -->
+    <div id="view-form" class="hidden space-y-6 max-w-4xl mx-auto print-hidden">
+      <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-lg font-semibold text-slate-800 flex items-center space-x-2 border-l-4 border-blue-500 pl-3">
+            <span>บันทึกข้อมูลใบแจ้งค่าไฟฟ้า (Grid)</span>
+          </h2>
+          <button type="button" onclick="openHistoryModal()" class="flex items-center space-x-1.5 px-3 py-2 bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl text-xs font-bold transition-all border border-slate-200 shadow-sm">
+            <i data-lucide="history" class="w-4 h-4"></i><span>ประวัติของฉัน</span>
+          </button>
+        </div>
+        <form id="energyForm" onsubmit="handleFormSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4 md:col-span-2">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">Meter ID</label><select name="meter_id" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 outline-none"><option value="MAIN-01">MAIN-01</option></select></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">Invoice No.</label><input type="text" name="invoice_no" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">เดือน/ปี</label><input type="month" name="billing_period" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+            </div>
+          </div>
+          <div class="space-y-4 md:col-span-2 bg-slate-50 p-5 rounded-xl border border-slate-200/60">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">Peak Demand (kW)</label><input type="number" step="0.01" name="peak_demand_kw" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">จำนวนเงิน Peak (฿)</label><input type="number" step="0.01" name="peak_demand_thb" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">On Peak (kWh)</label><input type="number" step="0.01" name="on_peak_kwh" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">จำนวนเงิน On Peak (฿)</label><input type="number" step="0.01" name="on_peak_thb" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">Off Peak (kWh)</label><input type="number" step="0.01" name="off_peak_kwh" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">จำนวนเงิน Off Peak (฿)</label><input type="number" step="0.01" name="off_peak_thb" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+            </div>
+          </div>
+          <div class="space-y-4 md:col-span-2 bg-slate-50 p-5 rounded-xl border border-slate-200/60">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">ค่าบริการ (฿)</label><input type="number" step="0.01" name="service_fee" value="312.24" readonly class="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 outline-none"></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">ค่า Ft (฿/หน่วย)</label><input type="number" step="0.0001" name="ft_rate" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">พลังงานสุทธิ (ก่อน VAT)</label><input type="number" step="0.01" name="base_energy_cost" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+              <div class="space-y-2"><label class="block text-xs font-semibold text-slate-500 uppercase">VAT 7% (฿)</label><input type="number" step="0.01" name="vat_thb" required class="w-full p-3 rounded-xl border border-slate-200 outline-none"></div>
+            </div>
+          </div>
+          <div class="space-y-2 md:col-span-2"><label class="block text-xs font-semibold text-slate-500 uppercase">ไฟล์แนบบิล</label><input type="file" name="bill_file" id="bill_file" required class="w-full text-sm text-slate-500 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 file:px-4 file:py-2 cursor-pointer hover:file:bg-blue-100 transition-all"></div>
+          <div class="space-y-2 md:col-span-2 mt-2"><label class="block text-xs font-semibold text-slate-500 uppercase">ยอดรวมสุทธิ (THB)</label><input type="number" step="0.01" name="total_amount" required class="w-full p-4 rounded-xl border-2 border-blue-200 bg-blue-50 font-bold text-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"></div>
+          <div class="md:col-span-2 pt-4"><button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all flex justify-center items-center space-x-2"><i data-lucide="upload-cloud" class="w-5 h-5"></i><span>ส่งข้อมูลเข้าระบบ</span></button></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW: OVERVIEW (ภาพรวม) ==================== -->
+    <div id="view-overview" class="space-y-6">
+      <div class="hidden print:block mb-6 pb-4 border-b-2 border-slate-800">
+        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">Executive Energy & ESG Overview</h2>
+        <p class="text-slate-600 font-medium" id="print-report-period-overview">Period: Data Analysis</p>
+      </div>
+
+      <!-- ESG & Top Level Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 page-break-avoid">
+        
+        <!-- Net Carbon Card -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-teal-100 relative overflow-hidden group hover:shadow-md transition-all lg:col-span-2">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="cloud-fog" class="w-20 h-20 text-teal-500"></i></div>
+          <p class="text-teal-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Net Carbon Emitted (คาร์บอนสุทธิ)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="ov-co2-net" class="text-4xl font-extrabold text-slate-800">0.0</h3>
+            <span class="text-sm font-semibold text-slate-400">TonCO₂e</span>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <p id="ov-co2-equation" class="text-xs text-slate-500 font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+              ปล่อย <span class="text-rose-500" id="ov-co2-emit">0.0</span> - ลดโซลาร์ <span class="text-emerald-500" id="ov-co2-avoid">0.0</span>
+            </p>
+            <p id="ov-trees" class="text-xs text-teal-600 font-bold flex items-center bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-100">
+              <i data-lucide="leafy-green" class="w-4 h-4 mr-1.5"></i> เทียบเท่าปลูกต้นไม้ 0 ต้น
+            </p>
+          </div>
+        </div>
+
+        <!-- Facility SEC -->
+        <div onclick="openSecHistoryModal()" class="bg-white p-5 rounded-2xl shadow-sm border-2 border-emerald-100 relative overflow-hidden group cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all">
+          <div class="absolute top-2 left-1/2 -translate-x-1/2 flex items-center space-x-1 text-[9px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none print-hidden"><i data-lucide="mouse-pointer-click" class="w-3 h-3"></i><span>คลิกดูประวัติ SEC</span></div>
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="leaf" class="w-16 h-16 text-emerald-500"></i></div>
+          <p class="text-emerald-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Grid SEC (Efficiency)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="ov-sec" class="text-3xl font-extrabold text-slate-800">0.0</h3>
+            <span class="text-xs font-semibold text-slate-400">kWh/m²/yr</span>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-100">
+            <div class="relative h-2 bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 rounded-full mt-3">
+              <div id="ov-sec-marker" class="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white border-2 border-slate-800 rounded-full shadow-sm transition-all" style="left: 0%;"></div>
+              <span class="absolute top-3 left-[40%] -translate-x-1/2 text-[9px] font-bold text-slate-500">Eco(120)</span>
+              <span class="absolute top-3 left-[80%] -translate-x-1/2 text-[9px] font-bold text-slate-500">Std(240)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Total Facility Load -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="zap" class="w-16 h-16 text-slate-500"></i></div>
+          <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1 mt-2">Total Facility Load</p>
+          <h3 id="ov-unit" class="text-3xl font-extrabold text-slate-800">0</h3>
+          <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between">
+            <p id="ov-unit-grid" class="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">Grid: 0</p>
+            <p id="ov-unit-solar" class="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-2 py-1 rounded">Solar: 0</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Overview Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 page-break-avoid mt-6">
+        <!-- Stacked Trend or Multi-year Line -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2 relative group">
+          <div class="print-hidden absolute top-6 right-6 flex items-center space-x-1 text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded border border-blue-100 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+            <i data-lucide="mouse-pointer-click" class="w-3 h-3"></i><span>คลิกที่กราฟเพื่อเจาะลึก (Drilldown)</span>
+          </div>
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg flex items-center space-x-2">
+                <span id="ov-trend-title">Facility Load: Grid vs Solar</span>
+              </h3>
+              <p class="text-xs text-slate-400 font-medium" id="ov-trend-subtitle">Energy Mix Comparison</p>
+            </div>
+            <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="bar-chart-horizontal" class="w-4 h-4 text-slate-500"></i></div>
+          </div>
+          <div class="h-72 w-full"><canvas id="ovTrendChart"></canvas></div>
+        </div>
+        <!-- Donut Mix -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 page-break-avoid">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">Energy Mix</h3>
+              <p class="text-xs text-slate-400 font-medium">Self-Reliance vs Grid</p>
+            </div>
+            <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="pie-chart" class="w-4 h-4 text-slate-500"></i></div>
+          </div>
+          <div class="h-60 w-full relative flex justify-center items-center">
+            <canvas id="ovDonutChart"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-4">
+              <span id="ov-donut-val" class="text-3xl font-bold text-slate-800">--</span>
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Solar %</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW: GRID ANALYTICS ==================== -->
+    <div id="view-grid" class="hidden space-y-6">
+      <div class="hidden print:block mb-6 pb-4 border-b-2 border-slate-800">
+        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">Grid Analytics Report</h2>
+        <p class="text-slate-600 font-medium" id="print-report-period-grid">Period: Data Analysis</p>
+      </div>
+
+      <!-- Grid Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 page-break-avoid">
+        
+        <!-- Grid Spend -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="banknote" class="w-16 h-16 text-blue-500"></i></div>
+          <p class="text-blue-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Grid Spend (จ่ายจริง)</p>
+          <h3 id="gr-spend" class="text-3xl font-extrabold text-slate-800">฿0</h3>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Avg/Mo:</span> <span id="gr-spend-avg" class="font-bold">฿0</span></div>
+            <div class="flex justify-between"><span class="text-rose-400">Max:</span> <span id="gr-spend-max" class="font-bold text-rose-600">฿0</span></div>
+            <div class="flex justify-between"><span class="text-emerald-400">Min:</span> <span id="gr-spend-min" class="font-bold text-emerald-600">฿0</span></div>
+          </div>
+        </div>
+
+        <!-- Grid Usage -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-amber-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="zap" class="w-16 h-16 text-amber-500"></i></div>
+          <p class="text-amber-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Grid Usage (หน่วย)</p>
+          <h3 id="gr-unit" class="text-3xl font-extrabold text-slate-800">0</h3>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Avg/Mo:</span> <span id="gr-unit-avg" class="font-bold">0</span></div>
+            <div class="flex justify-between"><span class="text-rose-400">Max:</span> <span id="gr-unit-max" class="font-bold text-rose-600">0</span></div>
+            <div class="flex justify-between"><span class="text-emerald-400">Min:</span> <span id="gr-unit-min" class="font-bold text-emerald-600">0</span></div>
+          </div>
+        </div>
+
+        <!-- Blended Rate -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="calculator" class="w-16 h-16 text-slate-500"></i></div>
+          <p class="text-slate-500 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Blended Cost Rate</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="gr-rate" class="text-3xl font-extrabold text-slate-800">฿0.00</h3>
+            <span class="text-xs font-semibold text-slate-400">/ kWh</span>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+            <p>ค่าไฟเฉลี่ยต่อหน่วยรวม Ft และภาษีในช่วงเวลาที่เลือก</p>
+          </div>
+        </div>
+
+        <!-- Peak Demand -->
+        <div onclick="openPeakGridModal()" class="bg-white p-5 rounded-2xl shadow-sm border border-rose-200 relative overflow-hidden cursor-pointer hover:border-rose-400 hover:shadow-md transition-all group">
+          <div class="absolute top-2 left-1/2 -translate-x-1/2 flex items-center space-x-1 text-[9px] font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded-full border border-rose-100 opacity-0 group-hover:opacity-100 transition-opacity z-10 print-hidden"><i data-lucide="mouse-pointer-click" class="w-3 h-3"></i><span>คลิกดูแนวโน้ม Peak</span></div>
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="activity" class="w-16 h-16 text-rose-500"></i></div>
+          <p class="text-rose-500 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Max Peak Demand</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="gr-peak" class="text-3xl font-extrabold text-slate-800">0.0</h3>
+            <span class="text-xs font-semibold text-slate-400">kW</span>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Avg Peak:</span> <span id="gr-peak-avg" class="font-bold">0.0</span></div>
+            <div class="flex justify-between"><span class="text-emerald-400">Min Peak:</span> <span id="gr-peak-min" class="font-bold text-emerald-600">0.0</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Grid Breakdown Chart -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 page-break-avoid mt-6">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Grid Cost Breakdown Structure</h3>
+            <p class="text-xs text-slate-400 font-medium">โครงสร้างค่าไฟ: Energy vs Peak vs Ft vs VAT</p>
+          </div>
+          <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-500"></i></div>
+        </div>
+        <div class="h-80 w-full"><canvas id="grBreakdownChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW: SOLAR ANALYTICS ==================== -->
+    <div id="view-solar" class="hidden space-y-6">
+      <div class="hidden print:block mb-6 pb-4 border-b-2 border-slate-800">
+        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">Solar Analytics Report</h2>
+        <p class="text-slate-600 font-medium" id="print-report-period-solar">Period: Data Analysis</p>
+      </div>
+
+      <!-- Solar Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 page-break-avoid">
+        
+        <!-- Solar Savings -->
+        <div class="bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-700 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="piggy-bank" class="w-16 h-16 text-yellow-400"></i></div>
+          <p class="text-slate-300 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Actual Solar Savings</p>
+          <h3 id="sl-savings" class="text-3xl font-extrabold text-white">฿0</h3>
+          <div class="mt-4 pt-3 border-t border-slate-700 text-xs text-slate-300 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Avg/Mo:</span> <span id="sl-savings-avg" class="font-bold">฿0</span></div>
+            <div class="flex justify-between"><span class="text-emerald-400">Max:</span> <span id="sl-savings-max" class="font-bold text-emerald-400">฿0</span></div>
+            <div class="flex justify-between"><span class="text-rose-400">Min:</span> <span id="sl-savings-min" class="font-bold text-rose-400">฿0</span></div>
+          </div>
+        </div>
+
+        <!-- Solar Generation -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-yellow-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="sun" class="w-16 h-16 text-yellow-500"></i></div>
+          <p class="text-yellow-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Self-Consumption (ใช้จริง)</p>
+          <h3 id="sl-unit" class="text-3xl font-extrabold text-slate-800">0</h3>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Avg/Mo:</span> <span id="sl-unit-avg" class="font-bold">0</span></div>
+            <div class="flex justify-between"><span class="text-emerald-400">Max:</span> <span id="sl-unit-max" class="font-bold text-emerald-600">0</span></div>
+            <div class="flex justify-between"><span class="text-rose-400">Min:</span> <span id="sl-unit-min" class="font-bold text-rose-600">0</span></div>
+          </div>
+        </div>
+
+        <!-- Export Loss -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-rose-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="trending-down" class="w-16 h-16 text-rose-500"></i></div>
+          <p class="text-rose-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Export Loss (ทิ้งไฟ)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="sl-loss-thb" class="text-3xl font-extrabold text-slate-800">฿0</h3>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Loss Units:</span> <span id="sl-loss-kwh" class="font-bold text-rose-600">0 kWh</span></div>
+            <p class="text-[9px] text-slate-400 leading-tight mt-1">สูญเสียโอกาส (Zero Export)</p>
+          </div>
+        </div>
+
+        <!-- Performance Ratio (PR) -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="gauge" class="w-16 h-16 text-slate-500"></i></div>
+          <p class="text-slate-500 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">System PR</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="sl-pr" class="text-3xl font-extrabold text-slate-800">0.0</h3>
+            <span class="text-xs font-semibold text-slate-400">%</span>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+            <p>ประสิทธิภาพรวมของระบบ (คำนวณจาก Use + Loss เทียบกับความเข้มแสง)</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Solar Generation Chart -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 page-break-avoid mt-6">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Solar Performance Trend</h3>
+            <p class="text-xs text-slate-400 font-medium">สัดส่วนพลังงานโซลาร์เซลล์ที่ใช้จริง เทียบกับส่วนที่ต้องทิ้ง (Export Loss)</p>
+          </div>
+          <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="sun" class="w-4 h-4 text-slate-500"></i></div>
+        </div>
+        <div class="h-80 w-full"><canvas id="slTrendChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW: TOU ANALYTICS ==================== -->
+    <div id="view-tou" class="hidden space-y-6">
+      <div class="hidden print:block mb-6 pb-4 border-b-2 border-slate-800">
+        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">TOU (Time of Use) Daily Analytics</h2>
+        <p class="text-slate-600 font-medium" id="print-report-period-tou">Period: Data Analysis</p>
+      </div>
+
+      <!-- TOU KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 page-break-avoid">
+        
+        <!-- Avg Daily Load -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-indigo-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="activity" class="w-16 h-16 text-indigo-500"></i></div>
+          <p class="text-indigo-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Avg Workday Load (วันทำงาน)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="tou-avg-daily" class="text-3xl font-extrabold text-slate-800">0</h3>
+            <span class="text-xs font-semibold text-slate-400">kWh/day</span>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 font-medium">
+            <p>ค่าเฉลี่ยการใช้พลังงานเฉพาะวันทำงานปกติ</p>
+          </div>
+        </div>
+
+        <!-- Base Load Leakage (Workday vs Holiday) -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-rose-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="alert-triangle" class="w-16 h-16 text-rose-500"></i></div>
+          <p class="text-rose-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Holiday Base Load (วันหยุด)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="tou-avg-holiday" class="text-3xl font-extrabold text-rose-600">0</h3>
+            <span class="text-xs font-semibold text-rose-400">kWh/day</span>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 font-medium flex justify-between items-center">
+            <span class="text-slate-500">เทียบกับวันทำงาน:</span> 
+            <span id="tou-leak-ratio" class="font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded">0%</span>
+          </div>
+        </div>
+
+        <!-- Max Peak Demand (TOU) -->
+        <div onclick="openPeakTouModal()" class="bg-white p-5 rounded-2xl shadow-sm border border-purple-200 relative overflow-hidden cursor-pointer hover:border-purple-400 hover:shadow-md transition-all group">
+          <div class="absolute top-2 left-1/2 -translate-x-1/2 flex items-center space-x-1 text-[9px] font-bold text-purple-500 bg-purple-50 px-2 py-1 rounded-full border border-purple-100 opacity-0 group-hover:opacity-100 transition-opacity z-10 print-hidden"><i data-lucide="mouse-pointer-click" class="w-3 h-3"></i><span>เจาะลึกรายวัน</span></div>
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="zap-off" class="w-16 h-16 text-purple-500"></i></div>
+          <p class="text-purple-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Max Peak (On vs Off Peak)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="tou-max-peak-on" class="text-3xl font-extrabold text-purple-700">0.0</h3>
+            <span class="text-xs font-semibold text-slate-400">kW</span>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Max Off-Peak:</span> <span id="tou-max-peak-off" class="font-bold text-teal-600">0.0 kW</span></div>
+          </div>
+        </div>
+
+        <!-- On-Peak Ratio -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="pie-chart" class="w-16 h-16 text-slate-500"></i></div>
+          <p class="text-slate-500 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">On-Peak Usage Ratio</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="tou-on-ratio" class="text-3xl font-extrabold text-slate-800">0%</h3>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+            <p>สัดส่วนการใช้ไฟในช่วงเวลา On-Peak (แพง) เทียบกับ Off-Peak</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TOU Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 page-break-avoid mt-6">
+        
+        <!-- Weekly Profile Chart -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">Day of Week Profile</h3>
+              <p class="text-xs text-slate-400 font-medium">ค่าเฉลี่ยการใช้ไฟแยกตามวันในสัปดาห์ (Sun-Sat)</p>
+            </div>
+            <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="bar-chart-2" class="w-4 h-4 text-slate-500"></i></div>
+          </div>
+          <div class="h-80 w-full"><canvas id="touWeeklyChart"></canvas></div>
+        </div>
+
+        <!-- Holiday vs Workday Trend (Or Distribution) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">Load Distribution</h3>
+              <p class="text-xs text-slate-400 font-medium">สัดส่วน On-Peak vs Off-Peak</p>
+            </div>
+            <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="pie-chart" class="w-4 h-4 text-slate-500"></i></div>
+          </div>
+          <div class="h-80 w-full relative flex justify-center items-center">
+            <canvas id="touDonutChart"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-4">
+              <span id="tou-donut-val" class="text-3xl font-bold text-slate-800">--</span>
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Off-Peak %</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW: BAS 50-METERS ANALYTICS ==================== -->
+    <div id="view-bas" class="hidden space-y-6">
+      <div class="hidden print:block mb-6 pb-4 border-b-2 border-slate-800">
+        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">BAS Sub-Metering Analytics (50 Meters)</h2>
+        <p class="text-slate-600 font-medium" id="print-report-period-bas">Period: Daily Operation Analysis</p>
+      </div>
+
+      <!-- BAS KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 page-break-avoid">
+        
+        <!-- Unaccounted / Common Area Ratio -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="help-circle" class="w-16 h-16 text-slate-500"></i></div>
+          <p class="text-slate-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Unaccounted Load (ส่วนกลาง)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="bas-unaccounted-val" class="text-3xl font-extrabold text-slate-800">0.0%</h3>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-500 font-medium leading-tight">
+            <p>เทียบ 50 Meters กับโหลดรวม TOU เพื่อหาส่วนต่างของไฟส่วนกลางหรือสูญเสีย</p>
+          </div>
+        </div>
+
+        <!-- Top Energy Consumer (Floor) -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-rose-100 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="trending-up" class="w-16 h-16 text-rose-500"></i></div>
+          <p class="text-rose-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Top Consuming Floor</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="bas-top-floor-name" class="text-3xl font-extrabold text-slate-800">Floor -</h3>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 font-medium flex justify-between items-center">
+            <span class="text-slate-500">โหลดรวม:</span> 
+            <span id="bas-top-floor-val" class="font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded">0 kWh</span>
+          </div>
+        </div>
+
+        <!-- Aircon Ratio -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-sky-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="wind" class="w-16 h-16 text-sky-500"></i></div>
+          <p class="text-sky-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Central Aircon (AMCC)</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="bas-aircon-ratio" class="text-3xl font-extrabold text-sky-700">0%</h3>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1 font-medium">
+            <div class="flex justify-between"><span class="text-slate-400">Total AMCC:</span> <span id="bas-aircon-val" class="font-bold text-sky-600">0 kWh</span></div>
+          </div>
+        </div>
+
+        <!-- Server / IT Load -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-emerald-200 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-10"><i data-lucide="server" class="w-16 h-16 text-emerald-500"></i></div>
+          <p class="text-emerald-600 text-xs font-extrabold uppercase tracking-wider mb-1 mt-2">Server & IT Load</p>
+          <div class="flex items-baseline space-x-1">
+            <h3 id="bas-it-ratio" class="text-3xl font-extrabold text-slate-800">0%</h3>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+             <div class="flex justify-between"><span class="text-slate-400">Total IT:</span> <span id="bas-it-val" class="font-bold text-emerald-600">0 kWh</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BAS Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 page-break-avoid mt-6">
+        
+        <!-- System Distribution (Donut) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-1">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">System Distribution</h3>
+              <p class="text-[10px] text-slate-400 font-medium leading-tight mt-1">สัดส่วนการใช้ไฟแยกระบบและพื้นที่ (รวม Unaccounted)</p>
+            </div>
+            <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="pie-chart" class="w-4 h-4 text-slate-500"></i></div>
+          </div>
+          <div class="h-64 w-full relative flex justify-center items-center">
+            <canvas id="basSystemDonut"></canvas>
+          </div>
+        </div>
+
+        <!-- Floor Heatmap (Bar) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">Floor Heatmap (พื้นที่เช่า/ทำงาน)</h3>
+              <p class="text-[10px] text-slate-400 font-medium mt-1">เปรียบเทียบปริมาณการใช้ไฟรวมของแต่ละชั้น (Mixed Load)</p>
+            </div>
+            <div class="bg-slate-100 p-2 rounded-lg print-hidden"><i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-500"></i></div>
+          </div>
+          <div class="h-64 w-full"><canvas id="basFloorBar"></canvas></div>
+        </div>
+      </div>
+
+      <!-- WFH Tracker Chart -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 page-break-avoid mt-6">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg flex items-center space-x-2">
+               <i data-lucide="trending-down" class="w-5 h-5 text-indigo-500"></i> 
+               <span>WFH & Power-Off Day Tracker</span>
+            </h3>
+            <p class="text-xs text-slate-400 font-medium mt-1">ติดตามพฤติกรรมการใช้ไฟรายวันของแต่ละชั้น เพื่อประเมินประสิทธิภาพนโยบาย WFH</p>
+          </div>
+          <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-100 print-hidden">
+             <select id="wfh-floor-select" onchange="updateDashboardUI()" class="bg-transparent text-indigo-700 font-bold text-xs outline-none cursor-pointer">
+                <option value="ALL">ดูทุกชั้น (Floor B-6)</option>
+                <option value="Floor B">Floor B</option>
+                <option value="Floor 1">Floor 1</option>
+                <option value="Floor 2">Floor 2</option>
+                <option value="Floor 3">Floor 3</option>
+                <option value="Floor 4">Floor 4</option>
+                <option value="Floor 5">Floor 5</option>
+                <option value="Floor 6">Floor 6</option>
+             </select>
+          </div>
+        </div>
+        <div class="h-80 w-full"><canvas id="wfhTrendChart"></canvas></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ==================== PEAK GRID HISTORY MODAL ==================== -->
+<div id="peakGridModal" class="hidden print-hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-rose-50/50">
+      <div>
+        <div class="flex items-center space-x-2 mb-1"><span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold tracking-wider uppercase">Monthly Peak Drilldown</span></div>
+        <h3 class="text-xl font-bold text-slate-800">แนวโน้มความต้องการพลังไฟฟ้าสูงสุดรายเดือน (Max Peak Demand)</h3>
+      </div>
+      <button type="button" onclick="closePeakGridModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-6"><div class="h-72 w-full"><canvas id="peakGridChart"></canvas></div></div>
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+      <p class="text-[10px] text-slate-500 font-medium">*กราฟแสดงผลค่าความต้องการไฟฟ้าสูงสุด (Peak) ประจำเดือนจากบิลการไฟฟ้า</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PEAK TOU DAILY MODAL ==================== -->
+<div id="peakTouModal" class="hidden print-hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col overflow-hidden max-h-[90vh]">
+    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-purple-50/50">
+      <div>
+        <div class="flex items-center space-x-2 mb-1"><span class="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold tracking-wider uppercase">Daily Peak Drilldown</span></div>
+        <h3 class="text-xl font-bold text-slate-800">วิเคราะห์เจาะลึกความต้องการพลังไฟฟ้าสูงสุดรายวัน (Daily Max Peak)</h3>
+      </div>
+      <button type="button" onclick="closePeakTouModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-6 overflow-y-auto">
+       <h4 class="text-sm font-bold text-slate-700 mb-4">แนวโน้ม Peak Demand รายวันตลอดช่วงเวลาที่เลือก</h4>
+       <div class="h-72 w-full"><canvas id="peakTouChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== BILL DRILLDOWN MODAL ==================== -->
+<div id="billDetailsModal" class="hidden print-hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+      <div>
+        <div class="flex items-center space-x-2 mb-1">
+          <span class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold tracking-wider uppercase">Drilldown Analysis</span>
+        </div>
+        <h3 class="text-xl font-bold text-slate-800">เจาะลึกข้อมูลบิลรายเดือน</h3>
+      </div>
+      <button type="button" onclick="closeBillDetailsModal()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-200 p-1.5 rounded-lg transition-all">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+      <div class="flex justify-between items-center bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6">
+        <div>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">รอบบิล (Billing Period)</p>
+          <p id="modal-bill-period" class="font-semibold text-slate-700 text-lg">-</p>
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Invoice No.</p>
+          <p id="modal-bill-invoice" class="font-mono text-slate-600 text-sm bg-white border border-slate-200 px-2 py-1 rounded">-</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+          <p class="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Grid Cost (จ่ายให้ กฟน.)</p>
+          <p id="modal-bill-thb" class="text-2xl font-black text-blue-700 mt-1">฿0.00</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-100 rounded-xl p-4">
+          <p class="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Grid Usage (ไฟหลวง)</p>
+          <p id="modal-bill-kwh" class="text-2xl font-black text-amber-700 mt-1">0 <span class="text-sm">kWh</span></p>
+        </div>
+        <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+          <p class="text-[10px] font-bold text-yellow-600 uppercase tracking-wider">Solar Usage (ผลิตเอง)</p>
+          <p id="modal-bill-solar-kwh" class="text-2xl font-black text-yellow-700 mt-1">0 <span class="text-sm">kWh</span></p>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+          <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Grid SEC (รายเดือน)</p>
+          <p id="modal-bill-sec" class="text-xl font-bold text-emerald-700 mt-1">0.00 <span class="text-sm">kWh/m²</span></p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100">
+      <a id="modal-bill-view-btn" href="#" target="_blank" class="w-full flex justify-center items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all">
+        <i data-lucide="file-text" class="w-5 h-5"></i>
+        <span>เปิดดูไฟล์บิลตัวจริง (PDF/Image)</span>
+      </a>
+      <p class="text-center text-[10px] text-slate-400 mt-3 font-medium">ดึงข้อมูลเอกสารแนบจากฐานข้อมูลกลาง Google Drive</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== HISTORY MODAL ==================== -->
+<div id="historyModal" class="hidden print-hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <h3 class="font-bold text-slate-800 flex items-center space-x-2"><i data-lucide="history" class="w-5 h-5 text-blue-500"></i><span>ประวัติการส่งข้อมูลของฉัน</span></h3>
+      <button type="button" onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-0 overflow-y-auto flex-1">
+      <table class="w-full text-left text-sm text-slate-600">
+        <thead class="bg-slate-50 sticky top-0 border-b border-slate-200"><th class="px-6 py-3">เดือน/ปี</th><th class="px-6 py-3">Invoice</th><th class="px-6 py-3 text-right">ยอดรวม (฿)</th><th class="px-6 py-3 text-center">สถานะ</th></thead>
+        <tbody id="historyTableBody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SEC HISTORY MODAL ==================== -->
+<div id="secHistoryModal" class="hidden print-hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-emerald-50/50">
+      <div>
+        <div class="flex items-center space-x-2 mb-1"><span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold tracking-wider uppercase">Building Efficiency Trend</span></div>
+        <h3 class="text-xl font-bold text-slate-800">ประวัติค่าพลังงานจำเพาะ Grid SEC (kWh/m²/เดือน)</h3>
+      </div>
+      <button type="button" onclick="closeSecHistoryModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-6"><div class="h-72 w-full"><canvas id="secTrendChart"></canvas></div></div>
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+      <p class="text-[10px] text-slate-500 font-medium">*กราฟอิงตามไฟ Grid ของการไฟฟ้า (ไม่รวมพลังงานแสงอาทิตย์)</p>
+      <p class="text-[10px] text-slate-500 font-medium border border-slate-200 px-3 py-1.5 rounded-lg bg-white shadow-sm">
+        เกณฑ์มาตรฐาน (รายเดือน): <span class="text-emerald-600 font-bold ml-1">Eco ≤ 10</span><span class="mx-2 text-slate-300">|</span><span class="text-amber-500 font-bold">Standard ≤ 20</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  let globalGridRecords = [];
+  let globalSolarRecords = [];
+  let globalTouRecords = []; 
+  let globalBasRecords = []; 
+  
+  let isDataFetched = false; 
+  let currentMode = 'THB'; 
+  let currentUserEmail = ''; 
+  let myCharts = { 
+     ovTrend: null, ovDonut: null, grBreakdown: null, slTrend: null, 
+     secHistory: null, touWeekly: null, touDonut: null, peakGrid: null, peakTou: null,
+     basDonut: null, basBar: null, wfhTrend: null 
+  }; 
+  
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const EMISSION_FACTOR = 0.4999; 
+  const TREE_ABSORPTION_RATE = 15; 
+  const SOLAR_CAPACITY_KWP = 167;
+
+  // --- OCTO_IT: SMART DICTIONARY (METER MAPPING) ---
+  const METER_MAP = {
+    // ชั้น B
+    "BDB1": "Floor B", "BDB2": "Floor B", "BEDB1": "Floor B", "BEDB2": "Floor B", "BUDB1": "Floor B", "BUDB2": "Floor B",
+    // ชั้น 1
+    "1DB1": "Floor 1", "1DB2": "Floor 1", "1EDB1": "Floor 1", "1EDB2": "Floor 1", "1UDB1": "Floor 1", "1UDB2": "Floor 1",
+    // ชั้น 2
+    "2DB1": "Floor 2", "2DB2": "Floor 2", "2EDB1": "Floor 2", "2EDB2": "Floor 2", "2UDB1": "Floor 2", "2UDB2": "Floor 2",
+    // ชั้น 3
+    "3DB1": "Floor 3", "3DB2": "Floor 3", "3EDB1": "Floor 3", "3EDB2": "Floor 3", "3UDB1": "Floor 3", "3UDB2": "Floor 3",
+    // ชั้น 4
+    "4DB1": "Floor 4", "4DB2": "Floor 4", "4EDB1": "Floor 4", "4EDB2": "Floor 4", "4UDB1": "Floor 4", "4UDB2": "Floor 4",
+    // ชั้น 5
+    "5DB1": "Floor 5", "5EDB1": "Floor 5", "5UDB1": "Floor 5", "5UDB1-VVIP": "Floor 5",
+    // ชั้น 6
+    "6DB1": "Floor 6", "6EDB1": "Floor 6", "6UDB1": "Floor 6",
+    // ระบบแอร์ (AMCC)
+    "AMCC1": "Aircon (AMCC)", "AMCC2": "Aircon (AMCC)", "AMCC3": "Aircon (AMCC)",
+    // ลิฟต์
+    "EDB-LIFT-01": "Lift", "EDB-LIFT-02": "Lift", "EDB-LIFT-03": "Lift",
+    // IT & Server
+    "EDB-SERVER": "Server/IT", "3EDB2-AV": "Server/IT",
+    // พื้นที่อื่นๆ / ภายนอก
+    "DB-LANDSCAPE": "Other", "EV-CHARGER": "Other", "WWT": "Other", "อาคารกีฬา": "Other"
+  };
+
+  function switchTab(tab) {
+    const tabs = ['form', 'overview', 'grid', 'solar', 'tou', 'bas'];
+    tabs.forEach(t => {
+      document.getElementById('view-' + t).classList.add('hidden');
+      document.getElementById('tab-' + t).classList.remove('tab-active');
+      document.getElementById('tab-' + t).classList.add('tab-inactive');
+    });
+    
+    document.getElementById('view-' + tab).classList.remove('hidden');
+    document.getElementById('tab-' + tab).classList.add('tab-active');
+    document.getElementById('tab-' + tab).classList.remove('tab-inactive');
+
+    if (tab !== 'form') {
+      if (isDataFetched) {
+        setTimeout(() => { updateDashboardUI(); }, 50);
+      } else {
+        loadDashboardData();
+      }
+    }
+  }
+
+function handleFormSubmit(e) { 
+    e.preventDefault(); 
+    
+    // ดึงข้อมูลจากฟอร์มและเปลี่ยนสถานะปุ่มเป็นกำลังโหลด
+    const form = e.target;
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>กำลังบันทึกและอัปโหลดไฟล์...</span>';
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    lucide.createIcons();
+
+    // ส่งข้อมูลไปให้ฟังก์ชัน submitEnergyRecord ในหลังบ้าน (Code.gs)
+    google.script.run
+      .withSuccessHandler(function(response) {
+        // คืนสถานะปุ่มกลับมาเมื่อเสร็จสิ้น
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        lucide.createIcons();
+
+        if (response.success) {
+          alert('✅ ' + response.message + '\nรหัสอ้างอิง: ' + response.recordId);
+          form.reset(); // ล้างค่าในฟอร์ม
+          loadDashboardData(); // โหลดข้อมูลใหม่เพื่ออัปเดตกราฟทันที
+        } else {
+          alert('❌ เกิดข้อผิดพลาด: ' + response.message);
+        }
+      })
+      .withFailureHandler(function(error) {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        lucide.createIcons();
+        alert('🌐 การเชื่อมต่อขัดข้อง: ' + error.message);
+      })
+      .submitEnergyRecord(form); // <--- คำสั่งเรียกฟังก์ชันฝั่ง Code.gs
+  }
+
+  function parseRobustDate(dateStr) {
+    if (!dateStr) return null;
+    let str = String(dateStr).trim();
+
+    if (/^\d{4}[-/]\d{2}[-/]\d{2}/.test(str) || str.includes('T')) {
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) return d;
+    }
+
+    const parts = str.split(/[-/]/);
+    if (parts.length === 3) {
+        let p1 = parseInt(parts[0], 10);
+        let p2 = parseInt(parts[1], 10);
+        let p3 = parseInt(parts[2], 10);
+
+        let day, month, year;
+        
+        if (p1 > 31) { 
+            year = p1; 
+            month = p2; 
+            day = p3; 
+        } else { 
+            day = p1; 
+            month = p2; 
+            year = p3; 
+        }
+
+        if (year < 100) year += 2000;
+        if (year > 2500) year -= 543; 
+        
+        let d = new Date(year, month - 1, day);
+        if (!isNaN(d.getTime())) return d;
+    }
+    
+    let dFallback = new Date(str);
+    if (!isNaN(dFallback.getTime())) return dFallback;
+    return null;
+  }
+
+  function getLocalMonthAndYear(dateString) {
+    const d = parseRobustDate(dateString);
+    if (!d) return null;
+    return { year: d.getFullYear().toString(), monthIndex: d.getMonth(), dayOfWeek: d.getDay(), dateObj: d }; 
+  }
+
+  function extractVal(obj, keywords) {
+    for (let i = 0; i < keywords.length; i++) {
+      const targetKey = keywords[i].toLowerCase().trim();
+      for (let k in obj) {
+        const actualKey = k.toLowerCase().trim();
+        if (actualKey === targetKey) {
+          let val = obj[k];
+          if (val === "" || val === null || val === undefined) continue; 
+          if (typeof val === 'string') val = val.replace(/,/g, ''); 
+          const num = Number(val);
+          if (!isNaN(num)) return num; 
+        }
+      }
+    }
+    return 0; 
+  }
+
+  function loadDashboardData() {
+    google.script.run
+      .withSuccessHandler(data => {
+        if(data) {
+          isDataFetched = true;
+          currentUserEmail = (data.user && data.user.trim() !== '') ? data.user.toLowerCase() : 'Operator'; 
+          
+          globalGridRecords = Array.isArray(data.records) ? data.records : [];
+          globalSolarRecords = Array.isArray(data.solarRecords) ? data.solarRecords : [];
+          globalTouRecords = Array.isArray(data.touRecords) ? data.touRecords : []; 
+          globalBasRecords = Array.isArray(data.basRecords) ? data.basRecords : [];
+          
+          document.getElementById('user-badge').innerHTML = '<i data-lucide="user" class="w-3 h-3"></i><span>' + currentUserEmail + '</span>';
+          lucide.createIcons();
+          populateYearFilter();
+          
+          const views = ['overview', 'grid', 'solar', 'tou', 'bas'];
+          views.forEach(v => {
+              if(!document.getElementById('view-' + v).classList.contains('hidden')) {
+                 setTimeout(() => { updateDashboardUI(); }, 50);
+              }
+          });
+        }
+      })
+      .withFailureHandler(err => {
+         document.getElementById('user-badge').innerHTML = '<i data-lucide="alert-circle" class="w-3 h-3 text-red-400"></i><span class="text-red-400">Connection Error</span>';
+         console.error(err);
+      })
+      .getDashboardData();
+  }
+
+  function populateYearFilter() {
+    const select = document.getElementById('filter-year');
+    const years = new Set();
+    
+    globalGridRecords.forEach(r => { const dInfo = getLocalMonthAndYear(r.billing_period); if (dInfo) years.add(dInfo.year); });
+    globalSolarRecords.forEach(r => { const dInfo = getLocalMonthAndYear(r.billing_period); if (dInfo) years.add(dInfo.year); });
+    globalTouRecords.forEach(r => { const dInfo = getLocalMonthAndYear(r.date); if (dInfo) years.add(dInfo.year); });
+    globalBasRecords.forEach(r => { const dInfo = getLocalMonthAndYear(r.date); if (dInfo) years.add(dInfo.year); });
+    
+    const sortedYears = Array.from(years).sort().reverse();
+    select.innerHTML = '<option value="ALL">All Years (ภาพรวม)</option>';
+    sortedYears.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y; 
+      opt.textContent = 'Calendar Year ' + y; 
+      select.appendChild(opt);
+    });
+  }
+
+  function setMetricMode(mode) {
+    currentMode = mode;
+    const btnThb = document.getElementById('toggle-thb');
+    const btnKwh = document.getElementById('toggle-kwh');
+    
+    if (mode === 'THB') {
+      btnThb.className = "flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-blue-600 transition-all";
+      btnKwh.className = "flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 transition-all";
+    } else {
+      btnKwh.className = "flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-blue-600 transition-all";
+      btnThb.className = "flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 transition-all";
+    }
+    setTimeout(() => { updateDashboardUI(); }, 50);
+  }
+
+  function updateDashboardUI() {
+    const selectedYear = document.getElementById('filter-year').value;
+    const buildingArea = parseFloat(document.getElementById('filter-area').value) || 10000;
+    
+    let fGrid = globalGridRecords;
+    if (selectedYear !== 'ALL') fGrid = fGrid.filter(r => { const d = getLocalMonthAndYear(r.billing_period); return d && d.year === selectedYear; });
+
+    let fSolar = globalSolarRecords;
+    if (selectedYear !== 'ALL') fSolar = fSolar.filter(r => { const d = getLocalMonthAndYear(r.billing_period); return d && d.year === selectedYear; });
+
+    let grossGridSpend = 0, grossGridKwh = 0;
+    fGrid.forEach(r => {
+      grossGridSpend += Number(r.total_amount) || 0;
+      grossGridKwh += (Number(r.on_peak_kwh) || 0) + (Number(r.off_peak_kwh) || 0);
+    });
+    const blendedRate = grossGridKwh > 0 ? (grossGridSpend / grossGridKwh) : 0;
+
+    let arrGridKwh = [], arrGridSpend = [], arrPeaks = [];
+    let arrSolarKwh = [], arrSolarSavings = [];
+
+    let totalGridSpend = 0, totalGridKwh = 0, maxPeak = 0, minPeak = 99999;
+    fGrid.forEach(r => {
+      const spend = Number(r.total_amount) || 0;
+      const kwh = (Number(r.on_peak_kwh) || 0) + (Number(r.off_peak_kwh) || 0);
+      const peak = Number(r.peak_demand_kw) || 0;
+
+      totalGridSpend += spend;
+      totalGridKwh += kwh;
+      if (peak > maxPeak) maxPeak = peak;
+      if (peak > 0 && peak < minPeak) minPeak = peak;
+      
+      if (kwh > 0) arrGridKwh.push(kwh);
+      if (spend > 0) arrGridSpend.push(spend);
+      if (peak > 0) arrPeaks.push(peak);
+    });
+    if(minPeak === 99999) minPeak = 0;
+
+    let totalSolarSelfKwh = 0, totalSolarLossKwh = 0, totalTheoreticalYield = 0;
+    fSolar.forEach(r => {
+      const self = Number(r.self_consumption_kwh) || 0;
+      const loss = Number(r.export_loss_kwh) || 0;
+      const irr = Number(r.irradiation) || 0;
+      
+      totalSolarSelfKwh += self;
+      totalSolarLossKwh += loss;
+      totalTheoreticalYield += (irr * SOLAR_CAPACITY_KWP);
+
+      if (self > 0) {
+        arrSolarKwh.push(self);
+        arrSolarSavings.push(self * blendedRate);
+      }
+    });
+
+    const totalSolarGenerated = totalSolarSelfKwh + totalSolarLossKwh; 
+    const avgPR = totalTheoreticalYield > 0 ? (totalSolarGenerated / totalTheoreticalYield) * 100 : 0;
+    const totalSolarSavingsThb = totalSolarSelfKwh * blendedRate;
+    const totalSolarLossThb = totalSolarLossKwh * blendedRate;
+
+    const facilityTotalKwh = totalGridKwh + totalSolarSelfKwh;
+    const solarPercent = facilityTotalKwh > 0 ? Math.round((totalSolarSelfKwh / facilityTotalKwh) * 100) : 0;
+
+    const monthsCount = selectedYear === 'ALL' ? (fGrid.length || 1) : 12;
+    const gridAvgMonthlySec = (totalGridKwh / (monthsCount > 0 ? monthsCount : 1)) / buildingArea;
+    const annualizedSec = gridAvgMonthlySec * 12; 
+
+    const emittedKgCO2 = totalGridKwh * EMISSION_FACTOR;     
+    const avoidedKgCO2 = totalSolarSelfKwh * EMISSION_FACTOR; 
+    const netKgCO2 = Math.max(0, emittedKgCO2 - avoidedKgCO2);
+
+    // ==========================================
+    // UPDATE DOM: OVERVIEW
+    // ==========================================
+    if(!document.getElementById('view-overview').classList.contains('hidden')) {
+      document.getElementById('ov-co2-net').innerText = (netKgCO2 / 1000).toLocaleString('th-TH', {maximumFractionDigits: 1});
+      document.getElementById('ov-co2-emit').innerText = (emittedKgCO2/1000).toFixed(1);
+      document.getElementById('ov-co2-avoid').innerText = (avoidedKgCO2/1000).toFixed(1);
+      document.getElementById('ov-trees').innerHTML = '<i data-lucide="leafy-green" class="w-4 h-4 mr-1.5"></i> เทียบเท่าปลูกต้นไม้ ' + Math.round(avoidedKgCO2 / TREE_ABSORPTION_RATE).toLocaleString('th-TH') + ' ต้น';
+      
+      document.getElementById('ov-sec').innerText = annualizedSec.toFixed(1);
+      let secGaugePercent = (annualizedSec / 300) * 100;
+      document.getElementById('ov-sec-marker').style.left = 'calc(' + Math.min(secGaugePercent, 100) + '% - 7px)';
+      
+      document.getElementById('ov-unit').innerText = facilityTotalKwh.toLocaleString('th-TH');
+      document.getElementById('ov-unit-grid').innerText = 'Grid: ' + totalGridKwh.toLocaleString('th-TH');
+      document.getElementById('ov-unit-solar').innerText = 'Solar: ' + totalSolarSelfKwh.toLocaleString('th-TH');
+      document.getElementById('ov-donut-val').innerText = solarPercent + '%';
+      
+      if(selectedYear === 'ALL') {
+         document.getElementById('ov-trend-title').innerText = "Yearly Trend Comparison (Grid + Solar)";
+         document.getElementById('ov-trend-subtitle').innerText = currentMode === 'THB' ? 'เทียบข้ามปี (THB)' : 'เทียบข้ามปี (kWh)';
+      } else {
+         document.getElementById('ov-trend-title').innerText = "Facility Load: Grid vs Solar";
+         document.getElementById('ov-trend-subtitle').innerText = currentMode === 'THB' ? 'Total Cost (THB) Equivalent' : 'Energy Usage (kWh) Stacked';
+      }
+      renderOverviewCharts(fGrid, fSolar, blendedRate, selectedYear, buildingArea);
+    }
+
+    // ==========================================
+    // UPDATE DOM: GRID
+    // ==========================================
+    if(!document.getElementById('view-grid').classList.contains('hidden')) {
+      const getStats = (arr) => { 
+        if(arr.length === 0) return { min: 0, max: 0, avg: 0 }; 
+        const sum = arr.reduce((a,b) => a+b, 0); 
+        return { min: Math.min(...arr), max: Math.max(...arr), avg: sum / arr.length }; 
+      };
+      const gridSpendStats = getStats(arrGridSpend); 
+      const gridKwhStats = getStats(arrGridKwh); 
+      const peakStats = getStats(arrPeaks);
+      
+      document.getElementById('gr-spend').innerText = '฿' + Math.round(totalGridSpend).toLocaleString('th-TH');
+      document.getElementById('gr-spend-avg').innerText = '฿' + Math.round(gridSpendStats.avg).toLocaleString('th-TH');
+      document.getElementById('gr-spend-max').innerText = '฿' + Math.round(gridSpendStats.max).toLocaleString('th-TH');
+      document.getElementById('gr-spend-min').innerText = '฿' + Math.round(gridSpendStats.min).toLocaleString('th-TH');
+      
+      document.getElementById('gr-unit').innerText = Math.round(totalGridKwh).toLocaleString('th-TH');
+      document.getElementById('gr-unit-avg').innerText = Math.round(gridKwhStats.avg).toLocaleString('th-TH');
+      document.getElementById('gr-unit-max').innerText = Math.round(gridKwhStats.max).toLocaleString('th-TH');
+      document.getElementById('gr-unit-min').innerText = Math.round(gridKwhStats.min).toLocaleString('th-TH');
+      
+      document.getElementById('gr-rate').innerText = '฿' + blendedRate.toFixed(2);
+      document.getElementById('gr-peak').innerText = maxPeak.toFixed(2);
+      document.getElementById('gr-peak-avg').innerText = peakStats.avg.toFixed(2);
+      document.getElementById('gr-peak-min').innerText = minPeak.toFixed(2);
+      
+      renderGridCharts(fGrid);
+    }
+
+    // ==========================================
+    // UPDATE DOM: SOLAR
+    // ==========================================
+    if(!document.getElementById('view-solar').classList.contains('hidden')) {
+      const getStats = (arr) => { 
+        if(arr.length === 0) return { min: 0, max: 0, avg: 0 }; 
+        const sum = arr.reduce((a,b) => a+b, 0); 
+        return { min: Math.min(...arr), max: Math.max(...arr), avg: sum / arr.length }; 
+      };
+      const solarKwhStats = getStats(arrSolarKwh); 
+      const solarSavingsStats = getStats(arrSolarSavings);
+      
+      document.getElementById('sl-savings').innerText = '฿' + Math.round(totalSolarSavingsThb).toLocaleString('th-TH');
+      document.getElementById('sl-savings-avg').innerText = '฿' + Math.round(solarSavingsStats.avg).toLocaleString('th-TH');
+      document.getElementById('sl-savings-max').innerText = '฿' + Math.round(solarSavingsStats.max).toLocaleString('th-TH');
+      document.getElementById('sl-savings-min').innerText = '฿' + Math.round(solarSavingsStats.min).toLocaleString('th-TH');
+      
+      document.getElementById('sl-unit').innerText = Math.round(totalSolarSelfKwh).toLocaleString('th-TH');
+      document.getElementById('sl-unit-avg').innerText = Math.round(solarKwhStats.avg).toLocaleString('th-TH');
+      document.getElementById('sl-unit-max').innerText = Math.round(solarKwhStats.max).toLocaleString('th-TH');
+      document.getElementById('sl-unit-min').innerText = Math.round(solarKwhStats.min).toLocaleString('th-TH');
+      
+      document.getElementById('sl-loss-thb').innerText = '฿' + Math.round(totalSolarLossThb).toLocaleString('th-TH');
+      document.getElementById('sl-loss-kwh').innerText = Math.round(totalSolarLossKwh).toLocaleString('th-TH') + ' kWh';
+      document.getElementById('sl-pr').innerText = avgPR.toFixed(1);
+      
+      renderSolarCharts(fSolar, blendedRate);
+    }
+
+    // ==========================================
+    // UPDATE DOM: TOU
+    // ==========================================
+    if(!document.getElementById('view-tou').classList.contains('hidden')) {
+      let fTou = globalTouRecords;
+      if (selectedYear !== 'ALL') fTou = fTou.filter(r => { const d = getLocalMonthAndYear(r.date); return d && d.year === selectedYear; });
+
+      let sumKwhWork = 0, countWork = 0;
+      let sumKwhHol = 0, countHol = 0;
+      let maxPeakOn = 0, maxPeakOff = 0;
+      let totalKwhOn = 0, totalKwhOff = 0;
+
+      fTou.forEach(r => {
+        const dInfo = getLocalMonthAndYear(r.date);
+        if(!dInfo) return;
+        
+        // OCTO_IT: Scale TOU MWh -> kWh โดยการคูณ 1000 ทันที
+        let kwhOn = extractVal(r, ['kwhon', 'kwh-on', 'kwh on', 'kwh_on']) * 1000;
+        let kwhOff = extractVal(r, ['kwhoff', 'kwh-off', 'kwh off', 'kwh_off']) * 1000;
+        const pOn = extractVal(r, ['peak_on', 'peak-on', 'peak on']); // Peak Demand คงหน่วย kW ไว้
+        const pOff = extractVal(r, ['peak_off', 'peak-off', 'peak off']);
+
+        kwhOn = Math.max(0, kwhOn);
+        kwhOff = Math.max(0, kwhOff);
+        const dailyTotal = kwhOn + kwhOff;
+
+        if (dailyTotal === 0 && pOn === 0 && pOff === 0) return; 
+        
+        const isHolStr = String(r.is_holiday || r.holiday || '').toUpperCase();
+        const isHoliday = (isHolStr === 'TRUE' || isHolStr === 'YES' || dInfo.dayOfWeek === 0 || dInfo.dayOfWeek === 6); 
+
+        if(isHoliday) { 
+          sumKwhHol += dailyTotal; 
+          countHol++; 
+        } else { 
+          sumKwhWork += dailyTotal; 
+          countWork++; 
+        }
+
+        totalKwhOn += kwhOn; 
+        totalKwhOff += kwhOff;
+        
+        if(pOn > maxPeakOn) maxPeakOn = pOn;
+        if(pOff > maxPeakOff) maxPeakOff = pOff;
+      });
+
+      const avgWork = countWork > 0 ? sumKwhWork / countWork : 0;
+      const avgHol = countHol > 0 ? sumKwhHol / countHol : 0;
+      const leakRatio = avgWork > 0 ? (avgHol / avgWork) * 100 : 0;
+      const onRatio = (totalKwhOn + totalKwhOff) > 0 ? (totalKwhOn / (totalKwhOn + totalKwhOff)) * 100 : 0;
+
+      // ปรับการแสดงผลหน้าการ์ด เป็น kWh เต็มๆ พร้อมทศนิยม 1 ตำแหน่งเพื่อความสวยงาม
+      document.getElementById('tou-avg-daily').innerText = avgWork.toLocaleString('th-TH', {maximumFractionDigits: 1});
+      document.getElementById('tou-avg-holiday').innerText = avgHol.toLocaleString('th-TH', {maximumFractionDigits: 1});
+      document.getElementById('tou-leak-ratio').innerText = leakRatio.toFixed(1) + '%';
+      document.getElementById('tou-max-peak-on').innerText = maxPeakOn.toFixed(3);
+      document.getElementById('tou-max-peak-off').innerText = maxPeakOff.toFixed(3) + ' kW';
+      document.getElementById('tou-on-ratio').innerText = onRatio.toFixed(1) + '%';
+
+      renderTouCharts(fTou);
+    }
+
+    // ==========================================
+    // UPDATE DOM: BAS 50-METERS (Actual kWh Data)
+    // ==========================================
+    if(!document.getElementById('view-bas').classList.contains('hidden')) {
+       let fTou = globalTouRecords;
+       let fBas = globalBasRecords;
+       
+       if (selectedYear !== 'ALL') {
+          fTou = fTou.filter(r => { const d = getLocalMonthAndYear(r.date); return d && d.year === selectedYear; });
+          fBas = fBas.filter(r => { const d = getLocalMonthAndYear(r.date); return d && d.year === selectedYear; });
+       }
+
+       // OCTO_IT Data Intersect Logic: 
+       // หาว่าเดือนนี้มีข้อมูล BAS ส่งมากี่วัน (กวาดวันที่ทั้งหมดที่มีอยู่ในระบบ BAS)
+       let validBasDates = new Set();
+       fBas.forEach(r => {
+          const dInfo = getLocalMonthAndYear(r.date);
+          if (dInfo) validBasDates.add(dInfo.dateObj.toISOString().split('T')[0]);
+       });
+
+       // Ground Truth: ดึงเป้าหมาย TOU (คูณ 1000 แล้ว) เฉพาะวันที่มีข้อมูลตรงกับ BAS เพื่อตัดความผิดเพี้ยน!
+       let sumTouLoad = 0;
+       fTou.forEach(r => {
+          const dInfo = getLocalMonthAndYear(r.date);
+          if (!dInfo) return;
+          const dateStr = dInfo.dateObj.toISOString().split('T')[0];
+          
+          if (validBasDates.has(dateStr)) {
+             let kwhOn = extractVal(r, ['kwhon', 'kwh-on', 'kwh on', 'kwh_on']) * 1000;
+             let kwhOff = extractVal(r, ['kwhoff', 'kwh-off', 'kwh off', 'kwh_off']) * 1000;
+             sumTouLoad += Math.max(0, kwhOn) + Math.max(0, kwhOff);
+          }
+       });
+
+       let grpLoad = {
+          "Floor B": 0, "Floor 1": 0, "Floor 2": 0, "Floor 3": 0, "Floor 4": 0, "Floor 5": 0, "Floor 6": 0,
+          "Aircon (AMCC)": 0, "Lift": 0, "Server/IT": 0, "Other": 0
+       };
+       let sumBasMapped = 0;
+
+       // ประมวลผลดึงค่า actual_kwh จาก Table_BAS_Records
+       fBas.forEach(r => {
+          let m_id = r.meter_id ? String(r.meter_id).trim() : "";
+          // แกะค่า actual_kwh ที่เพิ่งตกลงรูปแบบกันมา
+          let kwh = extractVal(r, ['actual_kwh', 'actual kwh', 'actual']);
+          kwh = Math.max(0, kwh); // ป้องกันค่าติดลบกรณีมิเตอร์รีเซ็ตหรือลบเลขผิด
+
+          let category = METER_MAP[m_id];
+          if(category) {
+             if(grpLoad[category] !== undefined) {
+                grpLoad[category] += kwh;
+             } else {
+                grpLoad[category] = kwh;
+             }
+             sumBasMapped += kwh;
+          }
+       });
+
+       // หาส่วนต่าง Unaccounted
+       let unaccounted = sumTouLoad - sumBasMapped;
+       if (unaccounted < 0 || sumTouLoad === 0) unaccounted = 0; 
+       let unaccRatio = sumTouLoad > 0 ? (unaccounted / sumTouLoad) * 100 : 0;
+       
+       let maxFloorName = "-";
+       let maxFloorVal = 0;
+       const floorNames = ["Floor B", "Floor 1", "Floor 2", "Floor 3", "Floor 4", "Floor 5", "Floor 6"];
+       floorNames.forEach(f => {
+          if(grpLoad[f] > maxFloorVal) { 
+             maxFloorVal = grpLoad[f]; 
+             maxFloorName = f; 
+          }
+       });
+
+       let totalIt = grpLoad["Server/IT"];
+       let itRatio = sumTouLoad > 0 ? (totalIt / sumTouLoad) * 100 : 0;
+       
+       let totalAir = grpLoad["Aircon (AMCC)"];
+       let airRatio = sumTouLoad > 0 ? (totalAir / sumTouLoad) * 100 : 0;
+
+       document.getElementById('bas-unaccounted-val').innerText = unaccRatio.toFixed(1) + '%';
+       document.getElementById('bas-top-floor-name').innerText = maxFloorName;
+       document.getElementById('bas-top-floor-val').innerText = Math.round(maxFloorVal).toLocaleString() + ' kWh';
+       document.getElementById('bas-aircon-ratio').innerText = airRatio.toFixed(1) + '%';
+       document.getElementById('bas-aircon-val').innerText = Math.round(totalAir).toLocaleString() + ' kWh';
+       document.getElementById('bas-it-ratio').innerText = itRatio.toFixed(1) + '%';
+       document.getElementById('bas-it-val').innerText = Math.round(totalIt).toLocaleString() + ' kWh';
+
+       renderBasCharts(grpLoad, unaccounted, fBas, selectedYear);
+    }
+
+    lucide.createIcons();
+  }
+
+  // --- CHART RENDERING LOGIC ---
+  const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#f43f5e'];
+  
+  function renderOverviewCharts(gridRecords, solarRecords, blendedRate, selectedYear, buildingArea) {
+    const ctxTrend = document.getElementById('ovTrendChart');
+    const ctxDonut = document.getElementById('ovDonutChart');
+    if (!ctxTrend || !ctxDonut) return;
+
+    if (myCharts.ovTrend) myCharts.ovTrend.destroy();
+    if (myCharts.ovDonut) myCharts.ovDonut.destroy();
+
+    let datasets = [];
+    let isLineChart = (selectedYear === 'ALL');
+
+    if (isLineChart) {
+      const dataByYear = {};
+      const allRecs = [...globalGridRecords, ...globalSolarRecords]; 
+      
+      allRecs.forEach(r => {
+         const dInfo = getLocalMonthAndYear(r.billing_period);
+         if (!dInfo) return;
+         const y = dInfo.year;
+         if (!dataByYear[y]) dataByYear[y] = { grid: new Array(12).fill(0), solar: new Array(12).fill(0) };
+         
+         if (r.invoice_no !== undefined) { 
+             dataByYear[y].grid[dInfo.monthIndex] += currentMode === 'THB' ? (Number(r.total_amount) || 0) : ((Number(r.on_peak_kwh)||0) + (Number(r.off_peak_kwh)||0));
+         } else { 
+             dataByYear[y].solar[dInfo.monthIndex] += currentMode === 'THB' ? ((Number(r.self_consumption_kwh)||0) * blendedRate) : (Number(r.self_consumption_kwh)||0);
+         }
+      });
+
+      let colorIdx = 0;
+      Object.keys(dataByYear).sort().reverse().forEach(year => {
+         let combinedData = new Array(12).fill(0);
+         for(let i=0; i<12; i++) { combinedData[i] = dataByYear[year].grid[i] + dataByYear[year].solar[i]; }
+         datasets.push({
+             label: year, 
+             data: combinedData, 
+             borderColor: CHART_COLORS[colorIdx % CHART_COLORS.length], 
+             backgroundColor: CHART_COLORS[colorIdx % CHART_COLORS.length] + '20',
+             borderWidth: 3, 
+             tension: 0.4, 
+             pointRadius: 4, 
+             pointHoverRadius: 7, 
+             fill: true
+         });
+         colorIdx++;
+      });
+    } else {
+      let gridData = new Array(12).fill(0);
+      let solarData = new Array(12).fill(0);
+
+      gridRecords.forEach(r => {
+        const dInfo = getLocalMonthAndYear(r.billing_period);
+        if(dInfo) gridData[dInfo.monthIndex] += currentMode === 'THB' ? (Number(r.total_amount) || 0) : ((Number(r.on_peak_kwh)||0) + (Number(r.off_peak_kwh)||0));
+      });
+      solarRecords.forEach(r => {
+        const dInfo = getLocalMonthAndYear(r.billing_period);
+        if(dInfo) solarData[dInfo.monthIndex] += currentMode === 'THB' ? ((Number(r.self_consumption_kwh)||0) * blendedRate) : (Number(r.self_consumption_kwh)||0);
+      });
+
+      datasets = [
+        { label: 'Solar Usage', data: solarData, backgroundColor: '#fcd34d', stack: 'Stack 0', borderRadius: 4 },
+        { label: 'Grid Usage', data: gridData, backgroundColor: '#3b82f6', stack: 'Stack 0', borderRadius: 4 }
+      ];
+    }
+
+    myCharts.ovTrend = new Chart(ctxTrend.getContext('2d'), { 
+      type: isLineChart ? 'line' : 'bar', 
+      data: { labels: MONTHS, datasets: datasets }, 
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } },
+        scales: { 
+            x: { stacked: !isLineChart, grid:{display:false} }, 
+            y: { stacked: !isLineChart, grid:{color:'#f1f5f9'}, beginAtZero:true } 
+        },
+        onClick: (e, activeElements) => {
+          if (activeElements.length > 0) {
+            const elementIndex = activeElements[0].index; 
+            const datasetIndex = activeElements[0].datasetIndex;
+            let yearToSearch = selectedYear;
+            if (isLineChart) yearToSearch = myCharts.ovTrend.data.datasets[datasetIndex].label; 
+
+            const clickedGridRecord = globalGridRecords.find(r => { const dInfo = getLocalMonthAndYear(r.billing_period); return dInfo && dInfo.year === yearToSearch && dInfo.monthIndex === elementIndex; });
+            const clickedSolarRecord = globalSolarRecords.find(r => { const dInfo = getLocalMonthAndYear(r.billing_period); return dInfo && dInfo.year === yearToSearch && dInfo.monthIndex === elementIndex; });
+
+            if (clickedGridRecord || clickedSolarRecord) { 
+                openBillDetailsModal(clickedGridRecord, clickedSolarRecord, buildingArea); 
+            } 
+          }
+        },
+        onHover: (e, activeElements) => { e.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default'; }
+      } 
+    });
+
+    let totalGrid = 0, totalSolar = 0;
+    gridRecords.forEach(r => { totalGrid += currentMode === 'THB' ? (Number(r.total_amount) || 0) : ((Number(r.on_peak_kwh)||0) + (Number(r.off_peak_kwh)||0)); });
+    solarRecords.forEach(r => { totalSolar += currentMode === 'THB' ? ((Number(r.self_consumption_kwh)||0) * blendedRate) : (Number(r.self_consumption_kwh)||0); });
+    
+    myCharts.ovDonut = new Chart(ctxDonut.getContext('2d'), {
+      type: 'doughnut',
+      data: { 
+          labels: ['Solar', 'Grid'], 
+          datasets: [{ data: [totalSolar, totalGrid], backgroundColor: ['#fcd34d', '#3b82f6'], borderWidth: 0 }] 
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+
+  function renderGridCharts(gridRecords) {
+    const ctx = document.getElementById('grBreakdownChart');
+    if (!ctx) return;
+    if (myCharts.grBreakdown) myCharts.grBreakdown.destroy();
+
+    let baseData = new Array(12).fill(0), peakData = new Array(12).fill(0), ftData = new Array(12).fill(0), vatData = new Array(12).fill(0);
+    gridRecords.forEach(r => {
+      const dInfo = getLocalMonthAndYear(r.billing_period);
+      if(!dInfo) return;
+      const mIdx = dInfo.monthIndex;
+      baseData[mIdx] += (Number(r.on_peak_thb)||0) + (Number(r.off_peak_thb)||0) + (Number(r.service_fee)||0);
+      peakData[mIdx] += Number(r.peak_demand_thb)||0;
+      ftData[mIdx] += (Number(r.ft_rate)||0) * ((Number(r.on_peak_kwh)||0)+(Number(r.off_peak_kwh)||0));
+      vatData[mIdx] += Number(r.vat_thb)||0;
+    });
+
+    myCharts.grBreakdown = new Chart(ctx.getContext('2d'), { 
+      type: 'bar', 
+      data: { labels: MONTHS, datasets: [
+          { label: 'Energy Cost', data: baseData, backgroundColor: '#3b82f6', stack: 'Stack 0' },
+          { label: 'Peak Cost', data: peakData, backgroundColor: '#f59e0b', stack: 'Stack 0' },
+          { label: 'Ft Charge', data: ftData, backgroundColor: '#8b5cf6', stack: 'Stack 0' },
+          { label: 'VAT 7%', data: vatData, backgroundColor: '#cbd5e1', stack: 'Stack 0' }
+      ]}, 
+      options: { 
+          responsive: true, maintainAspectRatio: false, 
+          plugins: { legend: { position: 'top' } }, 
+          scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true } } 
+      } 
+    });
+  }
+
+  function renderSolarCharts(solarRecords, blendedRate) {
+    const ctx = document.getElementById('slTrendChart');
+    if (!ctx) return;
+    if (myCharts.slTrend) myCharts.slTrend.destroy();
+
+    let selfData = new Array(12).fill(0);
+    let lossData = new Array(12).fill(0);
+
+    solarRecords.forEach(r => {
+      const dInfo = getLocalMonthAndYear(r.billing_period);
+      if(dInfo) {
+        selfData[dInfo.monthIndex] += currentMode === 'THB' ? ((Number(r.self_consumption_kwh)||0) * blendedRate) : (Number(r.self_consumption_kwh)||0);
+        lossData[dInfo.monthIndex] += currentMode === 'THB' ? ((Number(r.export_loss_kwh)||0) * blendedRate) : (Number(r.export_loss_kwh)||0);
+      }
+    });
+
+    myCharts.slTrend = new Chart(ctx.getContext('2d'), { 
+      type: 'bar', 
+      data: { labels: MONTHS, datasets: [
+          { label: 'Export Loss (ทิ้งไฟ)', data: lossData, backgroundColor: '#f43f5e', stack: 'Stack 0', borderRadius: 4 },
+          { label: 'Self Consumption (ใช้จริง)', data: selfData, backgroundColor: '#10b981', stack: 'Stack 0', borderRadius: 4 }
+      ]}, 
+      options: { 
+          responsive: true, maintainAspectRatio: false, 
+          plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } }, 
+          scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, grid:{color:'#f1f5f9'}, beginAtZero:true } } 
+      } 
+    });
+  }
+
+  function renderTouCharts(touRecords) {
+    const ctxWeekly = document.getElementById('touWeeklyChart');
+    const ctxDonut = document.getElementById('touDonutChart');
+    if (!ctxWeekly || !ctxDonut) return;
+
+    if (myCharts.touWeekly) myCharts.touWeekly.destroy();
+    if (myCharts.touDonut) myCharts.touDonut.destroy();
+
+    let sumOnDOW = new Array(7).fill(0);
+    let sumOffDOW = new Array(7).fill(0);
+    let countDOW = new Array(7).fill(0);
+    let totalOn = 0, totalOff = 0;
+
+    touRecords.forEach(r => {
+      const dInfo = getLocalMonthAndYear(r.date);
+      if(!dInfo) return;
+      const dow = dInfo.dayOfWeek;
+      
+      // OCTO_IT: Scale TOU Energy MWh -> kWh โดยการคูณ 1000
+      let kwhOn = extractVal(r, ['kwhon', 'kwh-on', 'kwh on', 'kwh_on']) * 1000;
+      let kwhOff = extractVal(r, ['kwhoff', 'kwh-off', 'kwh off', 'kwh_off']) * 1000;
+
+      kwhOn = Math.max(0, kwhOn);
+      kwhOff = Math.max(0, kwhOff);
+
+      if (kwhOn === 0 && kwhOff === 0) return; 
+
+      sumOnDOW[dow] += kwhOn;
+      sumOffDOW[dow] += kwhOff;
+      countDOW[dow]++;
+
+      totalOn += kwhOn;
+      totalOff += kwhOff;
+    });
+
+    const dowOrder = [0, 1, 2, 3, 4, 5, 6]; 
+    const dowLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    
+    let avgOnData = [], avgOffData = [];
+
+    dowOrder.forEach(dayIndex => {
+      const cnt = countDOW[dayIndex] || 1;
+      avgOnData.push(sumOnDOW[dayIndex] / cnt);
+      avgOffData.push(sumOffDOW[dayIndex] / cnt);
+    });
+
+    myCharts.touWeekly = new Chart(ctxWeekly.getContext('2d'), { 
+      type: 'bar', 
+      data: { 
+        labels: dowLabels, 
+        datasets: [
+          { label: 'Avg of kwh-off', data: avgOffData, backgroundColor: '#ef4444', stack: 'Stack 0', borderRadius: 4 }, 
+          { label: 'Avg of kwh-on', data: avgOnData, backgroundColor: '#3b82f6', stack: 'Stack 0', borderRadius: 4 } 
+        ] 
+      }, 
+      options: { 
+        responsive: true, maintainAspectRatio: false, 
+        plugins: { legend: { position: 'top' } }, 
+        scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true } } 
+      } 
+    });
+
+    const offRatio = (totalOn + totalOff) > 0 ? Math.round((totalOff / (totalOn + totalOff)) * 100) : 0;
+    document.getElementById('tou-donut-val').innerText = offRatio + '%';
+
+    myCharts.touDonut = new Chart(ctxDonut.getContext('2d'), {
+      type: 'doughnut',
+      data: { 
+          labels: ['Off-Peak', 'On-Peak'], 
+          datasets: [{ data: [totalOff, totalOn], backgroundColor: ['#ef4444', '#3b82f6'], borderWidth: 0 }] 
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+
+  function renderBasCharts(grpLoad, unaccounted, basRecords, selectedYear) {
+     const ctxDonut = document.getElementById('basSystemDonut');
+     const ctxBar = document.getElementById('basFloorBar');
+     const ctxWfh = document.getElementById('wfhTrendChart');
+     if(!ctxDonut || !ctxBar || !ctxWfh) return;
+
+     if(myCharts.basDonut) myCharts.basDonut.destroy();
+     if(myCharts.basBar) myCharts.basBar.destroy();
+     if(myCharts.wfhTrend) myCharts.wfhTrend.destroy();
+
+     // 1. Donut: System Distribution
+     let totalFloors = grpLoad["Floor B"] + grpLoad["Floor 1"] + grpLoad["Floor 2"] + grpLoad["Floor 3"] + grpLoad["Floor 4"] + grpLoad["Floor 5"] + grpLoad["Floor 6"];
+     let totalAir = grpLoad["Aircon (AMCC)"] || 0;
+     let totalIt = grpLoad["Server/IT"] || 0;
+     let totalLift = grpLoad["Lift"] || 0;
+     let totalOther = grpLoad["Other"] || 0;
+
+     myCharts.basDonut = new Chart(ctxDonut.getContext('2d'), {
+        type: 'pie',
+        data: {
+           labels: ['Floors (พื้นที่เช่า/ทำงาน)', 'Aircon (แอร์)', 'Server/IT', 'Lift (ลิฟต์)', 'Other (ภายนอก)', 'Unaccounted (ส่วนกลาง)'],
+           datasets: [{ 
+              data: [totalFloors, totalAir, totalIt, totalLift, totalOther, unaccounted], 
+              backgroundColor: ['#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#94a3b8', '#cbd5e1'],
+              borderWidth: 1 
+           }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 10} } } } }
+     });
+
+     // 2. Bar: Floor Heatmap
+     const floorLabels = ["Floor B", "Floor 1", "Floor 2", "Floor 3", "Floor 4", "Floor 5", "Floor 6"];
+     const floorData = floorLabels.map(f => grpLoad[f]);
+
+     myCharts.basBar = new Chart(ctxBar.getContext('2d'), {
+        type: 'bar',
+        data: {
+           labels: floorLabels,
+           datasets: [{ label: 'Mixed Load (kWh)', data: floorData, backgroundColor: '#f43f5e', borderRadius: 4 }]
+        },
+        options: { 
+           responsive: true, maintainAspectRatio: false, 
+           plugins: { legend: { display: false } }, 
+           scales: { x: { grid:{display:false} }, y: { beginAtZero: true } } 
+        }
+     });
+
+     // 3. Line: WFH Tracker using actual_kwh
+     const targetFloor = document.getElementById('wfh-floor-select').value;
+     
+     let dailyFloorData = {};
+     basRecords.forEach(r => {
+        const dObj = parseRobustDate(r.date);
+        if(!dObj) return;
+        const dInfo = getLocalMonthAndYear(r.date);
+        if(!dInfo || (selectedYear !== 'ALL' && dInfo.year !== selectedYear)) return;
+        
+        let m_id = r.meter_id ? String(r.meter_id).trim() : "";
+        let category = METER_MAP[m_id];
+        
+        // ดึง actual_kwh เพื่อวาดเทรนด์รายวัน
+        let kwh = extractVal(r, ['actual_kwh', 'actual kwh', 'actual']);
+        kwh = Math.max(0, kwh);
+
+        let isFloor = category && category.startsWith("Floor");
+        if ((targetFloor === 'ALL' && isFloor) || (targetFloor === category)) {
+           const dStr = dObj.toISOString().split('T')[0];
+           if(!dailyFloorData[dStr]) dailyFloorData[dStr] = { dateObj: dObj, totalKwh: 0 };
+           dailyFloorData[dStr].totalKwh += kwh;
+        }
+     });
+
+     let wfhArr = Object.values(dailyFloorData).sort((a,b) => a.dateObj - b.dateObj);
+     let wLabels = wfhArr.map(d => d.dateObj.toLocaleDateString('th-TH', {day:'numeric', month:'short'}));
+     let wData = wfhArr.map(d => d.totalKwh);
+
+     myCharts.wfhTrend = new Chart(ctxWfh.getContext('2d'), {
+        type: 'line',
+        data: {
+           labels: wLabels,
+           datasets: [{ 
+              label: `Daily Load: ${targetFloor} (kWh)`, 
+              data: wData, 
+              borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', 
+              borderWidth: 2, pointRadius: 3, fill: true, tension: 0.3 
+           }]
+        },
+        options: {
+           responsive: true, maintainAspectRatio: false,
+           plugins: { legend: { position: 'top' } },
+           scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 15 } }, y: { beginAtZero: true } }
+        }
+     });
+  }
+
+  // --- MODALS OPEN/CLOSE FUNCTIONS ---
+  function openSecHistoryModal() { 
+      document.getElementById('secHistoryModal').classList.remove('hidden'); 
+      const selectedYear = document.getElementById('filter-year').value; 
+      const buildingArea = parseFloat(document.getElementById('filter-area').value) || 10000; 
+      setTimeout(() => { renderSecTrendChart(globalGridRecords, selectedYear, buildingArea); }, 50); 
+  }
+  
+  function closeSecHistoryModal() { 
+      document.getElementById('secHistoryModal').classList.add('hidden'); 
+  }
+  
+  function openPeakGridModal() { 
+      document.getElementById('peakGridModal').classList.remove('hidden'); 
+      const selectedYear = document.getElementById('filter-year').value; 
+      setTimeout(() => { renderPeakGridChart(globalGridRecords, selectedYear); }, 50); 
+  }
+  
+  function closePeakGridModal() { 
+      document.getElementById('peakGridModal').classList.add('hidden'); 
+  }
+  
+  function openPeakTouModal() { 
+      document.getElementById('peakTouModal').classList.remove('hidden'); 
+      const selectedYear = document.getElementById('filter-year').value; 
+      setTimeout(() => { renderPeakTouChart(globalTouRecords, selectedYear); }, 50); 
+  }
+  
+  function closePeakTouModal() { 
+      document.getElementById('peakTouModal').classList.add('hidden'); 
+  }
+  
+  function openBillDetailsModal(gRecord, sRecord, buildingArea) {
+    const period = (gRecord && gRecord.billing_period) || (sRecord && sRecord.billing_period) || '-';
+    document.getElementById('modal-bill-period').innerText = period;
+    document.getElementById('modal-bill-invoice').innerText = (gRecord && gRecord.invoice_no) || 'ไม่มีบิล (Solar Only)';
+    
+    const thb = gRecord ? (Number(gRecord.total_amount) || 0) : 0;
+    const gridKwh = gRecord ? ((Number(gRecord.on_peak_kwh) || 0) + (Number(gRecord.off_peak_kwh) || 0)) : 0;
+    const peak = gRecord ? (Number(gRecord.peak_demand_kw) || 0) : 0;
+    const solarKwh = sRecord ? (Number(sRecord.self_consumption_kwh) || 0) : 0;
+    const sec = buildingArea && gridKwh > 0 ? (gridKwh / buildingArea) * 12 : 0;
+    
+    document.getElementById('modal-bill-thb').innerText = '฿' + thb.toLocaleString('th-TH', {minimumFractionDigits: 2});
+    document.getElementById('modal-bill-kwh').innerHTML = gridKwh.toLocaleString('th-TH') + ' <span class="text-sm">kWh</span>';
+    document.getElementById('modal-bill-solar-kwh').innerHTML = solarKwh.toLocaleString('th-TH') + ' <span class="text-sm">kWh</span>';
+    document.getElementById('modal-bill-sec').innerHTML = sec.toFixed(2) + ' <span class="text-sm">kWh/m²</span>';
+    
+    const viewBtn = document.getElementById('modal-bill-view-btn');
+    if (gRecord && gRecord.attachment_id && gRecord.attachment_id.trim() !== '') {
+       viewBtn.href = 'https://drive.google.com/file/d/' + gRecord.attachment_id + '/view';
+       viewBtn.classList.remove('opacity-50', 'cursor-not-allowed'); 
+       viewBtn.classList.add('hover:bg-blue-700'); 
+       viewBtn.removeAttribute('disabled');
+    } else {
+       viewBtn.removeAttribute('href'); 
+       viewBtn.classList.add('opacity-50', 'cursor-not-allowed'); 
+       viewBtn.classList.remove('hover:bg-blue-700'); 
+       viewBtn.setAttribute('disabled', 'true');
+    }
+    document.getElementById('billDetailsModal').classList.remove('hidden');
+  }
+  
+  function closeBillDetailsModal() { 
+      document.getElementById('billDetailsModal').classList.add('hidden'); 
+  }
+  
+function openHistoryModal() { 
+    const tbody = document.getElementById('historyTableBody');
+    tbody.innerHTML = ''; // ล้างตารางเดิมก่อน
+
+    // คัดลอกข้อมูลและเรียงจากใหม่ไปเก่า (เอา 50 รายการล่าสุด)
+    const sortedRecords = [...globalGridRecords].reverse().slice(0, 50);
+
+    if (sortedRecords.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 font-medium">ยังไม่มีประวัติการส่งข้อมูลในระบบ</td></tr>';
+    } else {
+      sortedRecords.forEach(r => {
+        const period = r.billing_period || '-';
+        const inv = r.invoice_no || '-';
+        const total = Number(r.total_amount) || 0;
+        const status = r.status || 'Submitted';
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="px-6 py-4 font-bold text-slate-700">${period}</td>
+          <td class="px-6 py-4 text-slate-500 font-mono text-xs">${inv}</td>
+          <td class="px-6 py-4 text-right font-black text-blue-600">฿${total.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+          <td class="px-6 py-4 text-center">
+            <span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">${status}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('historyModal').classList.remove('hidden'); 
+  }
+  
+  function closeHistoryModal() { 
+      document.getElementById('historyModal').classList.add('hidden'); 
+  }
+
+  // --- POPUP CHARTS RENDERING LOGIC ---
+  function renderPeakGridChart(gridRecords, selectedYear) { 
+    const ctx = document.getElementById('peakGridChart');
+    if (!ctx) return;
+    if (myCharts.peakGrid) myCharts.peakGrid.destroy();
+    
+    let peakData = new Array(12).fill(0);
+    gridRecords.forEach(r => {
+      const dInfo = getLocalMonthAndYear(r.billing_period);
+      if(dInfo && (selectedYear === 'ALL' || dInfo.year === selectedYear)) {
+          const peak = Number(r.peak_demand_kw) || 0;
+          if(peak > peakData[dInfo.monthIndex]) { 
+              peakData[dInfo.monthIndex] = peak; 
+          }
+      }
+    });
+    
+    myCharts.peakGrid = new Chart(ctx.getContext('2d'), { 
+        type: 'bar', 
+        data: { 
+            labels: MONTHS, 
+            datasets: [{ label: 'Max Peak Demand (kW)', data: peakData, backgroundColor: '#f43f5e', borderRadius: 4 }] 
+        }, 
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { legend: { position: 'top' } }, 
+            scales: { x: { grid: { display: false } }, y: { beginAtZero: true } } 
+        } 
+    });
+  }
+
+  function renderPeakTouChart(touRecords, selectedYear) { 
+    const ctx = document.getElementById('peakTouChart');
+    if (!ctx) return;
+    if (myCharts.peakTou) myCharts.peakTou.destroy();
+    
+    let dailyData = [];
+    touRecords.forEach(r => {
+      const dObj = parseRobustDate(r.date);
+      if(!dObj) return;
+      const dInfo = getLocalMonthAndYear(r.date);
+      if(!dInfo || (selectedYear !== 'ALL' && dInfo.year !== selectedYear)) return;
+      
+      const pOn = extractVal(r, ['peak_on', 'peak-on', 'peak on']);
+      const pOff = extractVal(r, ['peak_off', 'peak-off', 'peak off']);
+      if (pOn === 0 && pOff === 0) return;
+      
+      dailyData.push({ 
+          dateObj: dObj, 
+          dateStr: dObj.toLocaleDateString('th-TH', {day:'numeric', month:'short'}), 
+          peakOn: pOn, 
+          peakOff: pOff, 
+          maxPeak: Math.max(pOn, pOff) 
+      });
+    });
+    
+    dailyData.sort((a,b) => a.dateObj - b.dateObj);
+    const labels = dailyData.map(d => d.dateStr);
+    const dataOn = dailyData.map(d => d.peakOn);
+    const dataOff = dailyData.map(d => d.peakOff);
+    
+    myCharts.peakTou = new Chart(ctx.getContext('2d'), { 
+        type: 'line', 
+        data: { 
+            labels: labels, 
+            datasets: [ 
+                { label: 'On-Peak (kW)', data: dataOn, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 2, pointRadius: 2, fill: true, tension: 0.2 }, 
+                { label: 'Off-Peak (kW)', data: dataOff, borderColor: '#0ea5e9', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 2, fill: false, borderDash: [5, 5], tension: 0.2 } 
+            ] 
+        }, 
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { legend: { position: 'top' } }, 
+            scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 15 } }, y: { beginAtZero: true } } 
+        } 
+    });
+  }
+
+  function renderSecTrendChart(gridRecords, selectedYear, buildingArea) { 
+    const ctx = document.getElementById('secTrendChart');
+    if (!ctx) return;
+    if (myCharts.secHistory) myCharts.secHistory.destroy();
+    
+    let datasets = [];
+    const commonOptions = { 
+        responsive: true, maintainAspectRatio: false, 
+        plugins: { legend: { position: 'top' } }, 
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: 30 } } 
+    };
+    
+    if (selectedYear === 'ALL') {
+      const dataByYear = {};
+      gridRecords.forEach(r => {
+        const dInfo = getLocalMonthAndYear(r.billing_period);
+        if (!dInfo) return;
+        const y = dInfo.year;
+        if (!dataByYear[y]) dataByYear[y] = new Array(12).fill(null);
+        
+        const kwh = (Number(r.on_peak_kwh) || 0) + (Number(r.off_peak_kwh) || 0);
+        dataByYear[y][dInfo.monthIndex] = buildingArea ? (kwh / buildingArea) : 0;
+      });
+      
+      let colorIdx = 0;
+      Object.keys(dataByYear).sort().reverse().forEach(year => {
+        datasets.push({ 
+            label: 'Grid SEC ' + year, 
+            data: dataByYear[year], 
+            borderColor: CHART_COLORS[colorIdx % CHART_COLORS.length], 
+            borderWidth: 2, tension: 0.4, pointRadius: 4, fill: false 
+        });
+        colorIdx++;
+      });
+    } else {
+      const dataArray = new Array(12).fill(null); 
+      const filteredForPlot = gridRecords.filter(r => { 
+          const d = getLocalMonthAndYear(r.billing_period); 
+          return d && d.year === selectedYear; 
+      });
+      
+      filteredForPlot.forEach(r => {
+        const dInfo = getLocalMonthAndYear(r.billing_period);
+        if (!dInfo) return;
+        const kwh = (Number(r.on_peak_kwh) || 0) + (Number(r.off_peak_kwh) || 0);
+        dataArray[dInfo.monthIndex] = buildingArea ? (kwh / buildingArea) : 0;
+      });
+      
+      datasets.push({ 
+          label: 'Grid SEC (kWh/m²) ปี ' + selectedYear, 
+          data: dataArray, 
+          type: 'line', 
+          borderColor: '#10b981', 
+          backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+          borderWidth: 3, tension: 0.4, pointRadius: 5, fill: true 
+      });
+    }
+    
+    datasets.push({ label: 'Eco Baseline (10)', data: Array(12).fill(10), type: 'line', borderColor: '#10b981', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false, tension: 0 });
+    datasets.push({ label: 'Standard Baseline (20)', data: Array(12).fill(20), type: 'line', borderColor: '#f43f5e', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false, tension: 0 });
+    
+    myCharts.secHistory = new Chart(ctx.getContext('2d'), { type: 'line', data: { labels: MONTHS, datasets: datasets }, options: commonOptions });
+  }
+
+  // --- INITIALIZATION ---
+  window.onload = () => {
+    document.getElementById('view-form').classList.add('hidden');
+    document.getElementById('view-overview').classList.remove('hidden');
+
+    google.script.run
+      .withSuccessHandler(data => {
+        if(data) {
+          isDataFetched = true; 
+          currentUserEmail = (data.user && data.user.trim() !== '') ? data.user.toLowerCase() : 'Operator'; 
+          
+          globalGridRecords = Array.isArray(data.records) ? data.records : []; 
+          globalSolarRecords = Array.isArray(data.solarRecords) ? data.solarRecords : [];
+          globalTouRecords = Array.isArray(data.touRecords) ? data.touRecords : []; 
+          globalBasRecords = Array.isArray(data.basRecords) ? data.basRecords : []; 
+          
+          document.getElementById('user-badge').innerHTML = '<i data-lucide="user" class="w-3 h-3"></i><span>' + currentUserEmail + '</span>';
+          lucide.createIcons();
+          populateYearFilter();
+          setTimeout(() => { updateDashboardUI(); }, 50); 
+        }
+      })
+      .withFailureHandler(err => {
+         document.getElementById('user-badge').innerHTML = '<i data-lucide="alert-circle" class="w-3 h-3 text-red-400"></i><span class="text-red-400">Connection Error</span>';
+         console.error(err);
+      })
+      .getDashboardData();
+  };
+</script>
+</body>
+</html>
